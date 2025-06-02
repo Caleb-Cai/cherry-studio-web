@@ -240,4 +240,6 @@ docker-compose logs postgres
 
 ---
 
+--gittest
+
 🍒 **感谢使用 Cherry Studio!** 如果这个项目对您有帮助，请考虑给我们一个 ⭐ Star!
