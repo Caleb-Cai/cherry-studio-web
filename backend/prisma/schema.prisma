@@ -1,0 +1,148 @@
+// Prisma Schema for Cherry Studio Web Backend
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  chats      Chat[]
+  files      File[]
+  assistants Assistant[]
+  apiKeys    ApiKey[]
+  
+  @@map("users")
+}
+
+model Chat {
+  id          String   @id @default(uuid())
+  title       String
+  userId      String
+  modelId     String
+  modelName   String
+  provider    String
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  
+  @@map("chats")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  role      String   // user, assistant, system
+  content   String
+  metadata  Json?    // Store reasoning tokens, tool calls, etc.
+  tokens    Int?     // Token count for this message
+  createdAt DateTime @default(now())
+  
+  // Relations
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+model File {
+  id          String   @id @default(uuid())
+  filename    String
+  originalName String
+  filepath    String
+  mimetype    String
+  size        Int
+  userId      String
+  processed   Boolean  @default(false)
+  extractedText String?
+  embedding   Float[]? // Vector embedding for search
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("files")
+}
+
+model Assistant {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  prompt      String
+  modelId     String
+  modelName   String
+  provider    String
+  userId      String
+  isPublic    Boolean  @default(false)
+  isSystem    Boolean  @default(false)
+  avatar      String?
+  category    String?
+  tags        String[]
+  config      Json?    // Store model parameters
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("assistants")
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  name        String
+  provider    String   // openai, anthropic, gemini, etc.
+  keyHash     String   // Encrypted API key
+  userId      String
+  isActive    Boolean  @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("api_keys")
+}
+
+model Knowledge {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  embedding   Float[]  // Vector embedding
+  metadata    Json?    // Source, tags, etc.
+  userId      String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("knowledge")
+}
+
+model Usage {
+  id        String   @id @default(uuid())
+  userId    String
+  provider  String
+  model     String
+  tokens    Int
+  cost      Float?
+  date      DateTime @default(now())
+  
+  @@map("usage")
+}
