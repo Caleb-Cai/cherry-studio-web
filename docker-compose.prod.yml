@@ -1,0 +1,93 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cherry_studio
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./scripts/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    networks:
+      - cherry_network
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - cherry_network
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cherry_studio
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: cherry-studio-super-secret-jwt-key-prod-2024
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-your-anthropic-api-key}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-your-gemini-api-key}
+      CORS_ORIGIN: "http://172.16.18.174:8080"
+      FRONTEND_URL: "http://172.16.18.174:8080"
+      API_BASE_URL: "http://172.16.18.174:3001"
+    ports:
+      - "3001:3000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    networks:
+      - cherry_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: http://172.16.18.174:3001
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - cherry_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  cherry_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

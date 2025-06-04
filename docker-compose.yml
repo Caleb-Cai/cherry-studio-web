@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cherry_studio
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./scripts/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    networks:
+      - cherry_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - cherry_network
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cherry_studio
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: cherry-studio-super-secret-jwt-key-prod-2024
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-your-anthropic-api-key}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-your-gemini-api-key}
+      CORS_ORIGIN: http://172.16.18.174:8080
+      HOST: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "3001:3000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - cherry_network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - cherry_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  cherry_network:
+    driver: bridge

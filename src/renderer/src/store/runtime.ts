@@ -1,0 +1,143 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { AppLogo, UserAvatar } from '@renderer/config/env'
+import type { MinAppType, Topic } from '@renderer/types'
+import type { UpdateInfo } from 'builder-util-runtime'
+
+export interface ChatState {
+  isMultiSelectMode: boolean
+  selectedMessageIds: string[]
+  activeTopic: Topic | null
+}
+
+export interface UpdateState {
+  info: UpdateInfo | null
+  checking: boolean
+  downloading: boolean
+  downloaded: boolean
+  downloadProgress: number
+  available: boolean
+}
+
+export interface RuntimeState {
+  avatar: string
+  generating: boolean
+  /** whether the minapp popup is shown */
+  minappShow: boolean
+  /** the minapps that are opened and should be keep alive */
+  openedKeepAliveMinapps: MinAppType[]
+  /** the minapp that is opened for one time */
+  openedOneOffMinapp: MinAppType | null
+  /** the current minapp id */
+  currentMinappId: string
+  searching: boolean
+  filesPath: string
+  resourcesPath: string
+  update: UpdateState
+  export: ExportState
+  chat: ChatState
+}
+
+export interface ExportState {
+  isExporting: boolean
+}
+
+const initialState: RuntimeState = {
+  avatar: UserAvatar,
+  generating: false,
+  minappShow: false,
+  openedKeepAliveMinapps: [],
+  openedOneOffMinapp: null,
+  currentMinappId: '',
+  searching: false,
+  filesPath: '',
+  resourcesPath: '',
+  update: {
+    info: null,
+    checking: false,
+    downloading: false,
+    downloaded: false,
+    downloadProgress: 0,
+    available: false
+  },
+  export: {
+    isExporting: false
+  },
+  chat: {
+    isMultiSelectMode: false,
+    selectedMessageIds: [],
+    activeTopic: null
+  }
+}
+
+const runtimeSlice = createSlice({
+  name: 'runtime',
+  initialState,
+  reducers: {
+    setAvatar: (state, action: PayloadAction<string | null>) => {
+      state.avatar = action.payload || AppLogo
+    },
+    setGenerating: (state, action: PayloadAction<boolean>) => {
+      state.generating = action.payload
+    },
+    setMinappShow: (state, action: PayloadAction<boolean>) => {
+      state.minappShow = action.payload
+    },
+    setOpenedKeepAliveMinapps: (state, action: PayloadAction<MinAppType[]>) => {
+      state.openedKeepAliveMinapps = action.payload
+    },
+    setOpenedOneOffMinapp: (state, action: PayloadAction<MinAppType | null>) => {
+      state.openedOneOffMinapp = action.payload
+    },
+    setCurrentMinappId: (state, action: PayloadAction<string>) => {
+      state.currentMinappId = action.payload
+    },
+    setSearching: (state, action: PayloadAction<boolean>) => {
+      state.searching = action.payload
+    },
+    setFilesPath: (state, action: PayloadAction<string>) => {
+      state.filesPath = action.payload
+    },
+    setResourcesPath: (state, action: PayloadAction<string>) => {
+      state.resourcesPath = action.payload
+    },
+    setUpdateState: (state, action: PayloadAction<Partial<UpdateState>>) => {
+      state.update = { ...state.update, ...action.payload }
+    },
+    setExportState: (state, action: PayloadAction<Partial<ExportState>>) => {
+      state.export = { ...state.export, ...action.payload }
+    },
+    // Chat related actions
+    toggleMultiSelectMode: (state, action: PayloadAction<boolean>) => {
+      state.chat.isMultiSelectMode = action.payload
+      if (!action.payload) {
+        state.chat.selectedMessageIds = []
+      }
+    },
+    setSelectedMessageIds: (state, action: PayloadAction<string[]>) => {
+      state.chat.selectedMessageIds = action.payload
+    },
+    setActiveTopic: (state, action: PayloadAction<Topic>) => {
+      state.chat.activeTopic = action.payload
+    }
+  }
+})
+
+export const {
+  setAvatar,
+  setGenerating,
+  setMinappShow,
+  setOpenedKeepAliveMinapps,
+  setOpenedOneOffMinapp,
+  setCurrentMinappId,
+  setSearching,
+  setFilesPath,
+  setResourcesPath,
+  setUpdateState,
+  setExportState,
+  // Chat related actions
+  toggleMultiSelectMode,
+  setSelectedMessageIds,
+  setActiveTopic
+} = runtimeSlice.actions
+
+export default runtimeSlice.reducer
